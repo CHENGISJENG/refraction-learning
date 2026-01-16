@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>物理自學單元：光的折射 (Snell's Law)</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .animate-draw {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            animation: draw 2s forwards;
+        }
+        @keyframes draw {
+            to { stroke-dashoffset: 0; }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.5s ease-out;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons Components (Inline SVGs) ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
+        );
+        const ChevronRight = (props) => <IconBase {...props}><polyline points="9 18 15 12 9 6" /></IconBase>;
+        const ChevronLeft = (props) => <IconBase {...props}><polyline points="15 18 9 12 15 6" /></IconBase>;
+        const BookOpen = (props) => <IconBase {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" /><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" /></IconBase>;
+        const Calculator = (props) => <IconBase {...props}><rect x="4" y="2" width="16" height="20" rx="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="16" y1="14" x2="16" y2="14" /><line x1="12" y1="14" x2="12" y2="14" /><line x1="8" y1="14" x2="8" y2="14" /><line x1="16" y1="18" x2="16" y2="18" /><line x1="12" y1="18" x2="12" y2="18" /><line x1="8" y1="18" x2="8" y2="18" /></IconBase>;
+        const Play = (props) => <IconBase {...props}><polygon points="5 3 19 12 5 21 5 3" /></IconBase>;
+        const CheckCircle = (props) => <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></IconBase>;
+        const HelpCircle = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" /></IconBase>;
+        const RotateCcw = (props) => <IconBase {...props}><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></IconBase>;
+        const TrendingUp = (props) => <IconBase {...props}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></IconBase>;
+        const PenTool = (props) => <IconBase {...props}><path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" /></IconBase>;
+        const Table = (props) => <IconBase {...props}><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18" /></IconBase>;
+
+        // --- Main App Component ---
+        const SnellsLawLearning = () => {
+            const [currentSlide, setCurrentSlide] = useState(0);
+
+            // Shared Constants for visuals
+            const SVG_SIZE = 300;
+            const CENTER_X = SVG_SIZE / 2;
+            const CENTER_Y = SVG_SIZE / 2;
+            const RAY_LENGTH = 120;
+
+            // --- SLIDE 1: 基礎概念 ---
+            const BasicConceptSlide = () => {
+                const radius = 40;
+                const rad_i = 30 * Math.PI / 180;
+                const startX_i = CENTER_X;
+                const startY_i = CENTER_Y - radius;
+                const endX_i = CENTER_X - radius * Math.sin(rad_i);
+                const endY_i = CENTER_Y - radius * Math.cos(rad_i);
+
+                const rad_r = 20 * Math.PI / 180;
+                const startX_r = CENTER_X;
+                const startY_r = CENTER_Y + radius;
+                const endX_r = CENTER_X + radius * Math.sin(rad_r);
+                const endY_r = CENTER_Y + radius * Math.cos(rad_r);
+
+                return (
+                <div className="flex flex-col items-center h-full">
+                    <h2 className="text-2xl font-bold text-blue-800 mb-4">第一章：光的折射 (Refraction)</h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl items-center">
+                    <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-blue-100 flex flex-col items-center">
+                        <svg width={SVG_SIZE} height={SVG_SIZE} className="overflow-visible">
+                        <rect x="0" y="0" width={SVG_SIZE} height={CENTER_Y} fill="#e0f2fe" opacity="0.5" />
+                        <rect x="0" y={CENTER_Y} width={SVG_SIZE} height={CENTER_Y} fill="#bfdbfe" opacity="0.5" />
+                        
+                        <line x1="0" y1={CENTER_Y} x2={SVG_SIZE} y2={CENTER_Y} stroke="#334155" strokeWidth="2" />
+                        <text x="10" y={CENTER_Y - 10} className="text-xs text-slate-500">介質 1 (空氣)</text>
+                        <text x="10" y={CENTER_Y + 20} className="text-xs text-slate-500">介質 2 (玻璃/水)</text>
+
+                        <line x1={CENTER_X} y1="20" x2={CENTER_X} y2={SVG_SIZE - 20} stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" />
+                        <text x={CENTER_X + 5} y="40" className="text-xs text-slate-500">法線 (Normal)</text>
+
+                        <line x1={CENTER_X - RAY_LENGTH*Math.sin(rad_i)} y1={CENTER_Y - RAY_LENGTH*Math.cos(rad_i)} x2={CENTER_X} y2={CENTER_Y} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow)" />
+                        <line x1={CENTER_X} y1={CENTER_Y} x2={CENTER_X + RAY_LENGTH*Math.sin(rad_r)} y2={CENTER_Y + RAY_LENGTH*Math.cos(rad_r)} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow)" />
+
+                        <path d={`M ${startX_i} ${startY_i} A ${radius} ${radius} 0 0 0 ${endX_i} ${endY_i}`} fill="none" stroke="#2563eb" strokeWidth="2" />
+                        <text x={CENTER_X - 15} y={CENTER_Y - 50} className="text-sm font-bold fill-blue-600">i</text>
+
+                        <path d={`M ${startX_r} ${startY_r} A ${radius} ${radius} 0 0 1 ${endX_r} ${endY_r}`} fill="none" stroke="#16a34a" strokeWidth="2" />
+                        <text x={CENTER_X + 8} y={CENTER_Y + 55} className="text-sm font-bold fill-green-600">r</text>
+
+                        <defs>
+                            <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                            <path d="M0,0 L0,6 L9,3 z" fill="#ef4444" />
+                            </marker>
+                        </defs>
+                        </svg>
+                    </div>
+
+                    <div className="space-y-4 text-slate-700">
+                        <div className="bg-blue-50 p-4 rounded-lg border-l-4 border-blue-500">
+                        <h3 className="font-bold text-lg mb-2">關鍵詞彙：</h3>
+                        <ul className="list-disc pl-5 space-y-2">
+                            <li><span className="font-bold text-red-500">入射線</span>：射向界面的光線。</li>
+                            <li><span className="font-bold text-red-500">折射線</span>：穿過界面後改變方向的光線。</li>
+                            <li><span className="font-bold text-gray-500">法線 (Normal)</span>：垂直於界面的虛線 (必須畫成虛線)。</li>
+                            <li><span className="font-bold text-blue-600">入射角 (i)</span>：入射線與法線的夾角。</li>
+                            <li><span className="font-bold text-green-600">折射角 (r)</span>：折射線與法線的夾角。</li>
+                        </ul>
+                        </div>
+                        <p className="text-sm text-slate-500 italic">注意：所有角度都是與「法線」測量的，不是與界面！</p>
+                    </div>
+                    </div>
+                </div>
+                );
+            };
+
+            // --- SLIDE 2: 偏向原因 ---
+            const MechanismSlide = () => {
+                return (
+                <div className="flex flex-col items-center h-full">
+                    <h2 className="text-2xl font-bold text-purple-800 mb-2">第二章：為什麼光線會偏折？</h2>
+                    <p className="mb-4 text-slate-600 text-center max-w-2xl">
+                    光在不同介質中的<span className="font-bold text-purple-600">速度不同</span>。這與介質的<span className="font-bold">折射率 (Refractive Index, n)</span> 有關。
+                    </p>
+                    
+                    <div className="mb-6 bg-purple-50 px-6 py-3 rounded-lg border border-purple-200 text-center">
+                        <span className="text-xl font-bold text-purple-900">折射率 n 愈高 ⮕ 光速愈慢</span>
+                        <p className="text-sm text-purple-700 mt-1">例如：光在玻璃 (n=1.5) 中比在水 (n=1.33) 中更慢</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
+                    <div className="bg-white p-4 rounded-xl shadow-md border-t-4 border-indigo-500 flex flex-col items-center">
+                        <h3 className="font-bold text-lg mb-2">情況 1：低 n → 高 n</h3>
+                        <div className="text-sm text-slate-500 mb-2">(例如：空氣 n=1.0 → 玻璃 n=1.5)</div>
+                        <div className="text-xs bg-indigo-100 px-2 py-1 rounded mb-4 text-indigo-800 font-bold">速度變慢 → 偏向法線</div>
+                        <svg width={200} height={200} className="overflow-visible bg-gray-50 rounded-lg">
+                        <rect x="0" y="100" width="200" height="100" fill="#cbd5e1" opacity="0.5" />
+                        <line x1="0" y1="100" x2="200" y2="100" stroke="#334155" />
+                        <line x1="100" y1="0" x2="100" y2="200" stroke="#94a3b8" strokeDasharray="4,4" />
+                        <line x1="40" y1="20" x2="100" y2="100" stroke="#ef4444" strokeWidth="2" markerEnd="url(#arrow-sm)" />
+                        <line x1="100" y1="100" x2="120" y2="180" stroke="#ef4444" strokeWidth="2" markerEnd="url(#arrow-sm)" />
+                        <text x="10" y="90" fontSize="10" fill="#64748b">低折射率 (快)</text>
+                        <text x="10" y="120" fontSize="10" fill="#1e293b" fontWeight="bold">高折射率 (慢)</text>
+                        <text x="130" y="150" fontSize="10" fill="#4338ca" fontWeight="bold">偏向法線</text>
+                        </svg>
+                    </div>
+
+                    <div className="bg-white p-4 rounded-xl shadow-md border-t-4 border-orange-500 flex flex-col items-center">
+                        <h3 className="font-bold text-lg mb-2">情況 2：高 n → 低 n</h3>
+                        <div className="text-sm text-slate-500 mb-2">(例如：玻璃 n=1.5 → 空氣 n=1.0)</div>
+                        <div className="text-xs bg-orange-100 px-2 py-1 rounded mb-4 text-orange-800 font-bold">速度變快 → 偏離法線</div>
+                        <svg width={200} height={200} className="overflow-visible bg-gray-50 rounded-lg">
+                        <rect x="0" y="0" width="200" height="100" fill="#cbd5e1" opacity="0.5" />
+                        <line x1="0" y1="100" x2="200" y2="100" stroke="#334155" />
+                        <line x1="100" y1="0" x2="100" y2="200" stroke="#94a3b8" strokeDasharray="4,4" />
+                        <line x1="60" y1="20" x2="100" y2="100" stroke="#ef4444" strokeWidth="2" markerEnd="url(#arrow-sm)" />
+                        <line x1="100" y1="100" x2="160" y2="160" stroke="#ef4444" strokeWidth="2" markerEnd="url(#arrow-sm)" />
+                        <text x="10" y="90" fontSize="10" fill="#1e293b" fontWeight="bold">高折射率 (慢)</text>
+                        <text x="10" y="120" fontSize="10" fill="#64748b">低折射率 (快)</text>
+                        <text x="130" y="130" fontSize="10" fill="#ea580c" fontWeight="bold">偏離法線</text>
+                        <defs>
+                            <marker id="arrow-sm" markerWidth="6" markerHeight="6" refX="5" refY="1.5" orient="auto">
+                            <path d="M0,0 L0,3 L5,1.5 z" fill="#ef4444" />
+                            </marker>
+                        </defs>
+                        </svg>
+                    </div>
+                    </div>
+                    
+                    <div className="mt-8 bg-yellow-50 p-4 rounded-lg border-2 border-yellow-300 text-center max-w-2xl shadow-sm">
+                    <p className="font-bold text-yellow-900 text-lg mb-1">🔥 必背口訣 🔥</p>
+                    <p className="text-2xl font-black text-blue-800 my-2">「低高向，高低離」</p>
+                    <div className="text-left text-sm text-yellow-800 mt-2 space-y-1 bg-white p-3 rounded">
+                        <p>1. <span className="font-bold">低</span>折射率 入 <span className="font-bold">高</span>折射率 ⮕ 偏<span className="font-bold text-red-600">向</span>法線</p>
+                        <p>2. <span className="font-bold">高</span>折射率 入 <span className="font-bold">低</span>折射率 ⮕ 偏<span className="font-bold text-red-600">離</span>法線</p>
+                    </div>
+                    </div>
+                </div>
+                );
+            };
+
+            // --- PROBLEM SLIDE COMPONENT ---
+            const Fraction = ({ top, bottom }) => (
+                <span className="inline-flex flex-col items-center justify-center align-middle mx-1.5 -translate-y-1">
+                <span className="border-b border-white leading-tight px-1 pb-0.5">{top}</span>
+                <span className="leading-tight pt-0.5">{bottom}</span>
+                </span>
+            );
+
+            const ProblemSlide = ({ title, scenario, targetVar, values }) => {
+                const [animStep, setAnimStep] = useState(0); 
+
+                const startProblemAnimation = () => {
+                setAnimStep(1);
+                };
+
+                const nextAnimStep = () => {
+                    setAnimStep(prev => Math.min(prev + 1, 7));
+                }
+
+                useEffect(() => {
+                    setAnimStep(0);
+                }, [title]);
+
+                const { n1, n2, theta1, theta2 } = values;
+                const rad1 = theta1 * Math.PI / 180;
+                const rad2 = theta2 * Math.PI / 180;
+                
+                const sin1Val = Math.sin(rad1).toFixed(4);
+                const sin2Val = Math.sin(rad2).toFixed(4);
+                const term1Val = (n1 * Math.sin(rad1)).toFixed(4);
+                const term2Val = (n2 * Math.sin(rad2)).toFixed(4);
+
+                const startX = CENTER_X - RAY_LENGTH * Math.sin(rad1);
+                const startY = CENTER_Y - RAY_LENGTH * Math.cos(rad1);
+                const endX = CENTER_X + RAY_LENGTH * Math.sin(rad2);
+                const endY = CENTER_Y + RAY_LENGTH * Math.cos(rad2);
+
+                const renderMathStep = () => {
+                    const isFindTheta1 = targetVar === 'theta1';
+                    const isFindTheta2 = targetVar === 'theta2';
+                    const isFindN1 = targetVar === 'n1';
+                    const isFindN2 = targetVar === 'n2';
+
+                    const stepClass = "transition-all duration-500 ease-in-out my-2 p-2 rounded hover:bg-slate-700";
+                    const currentClass = "bg-slate-700 border-l-4 border-yellow-400 pl-2";
+
+                    return (
+                        <div className="font-mono text-lg space-y-2 text-left w-full max-w-md mx-auto">
+                            {/* Step 1: Formula */}
+                            {animStep >= 1 && (
+                                <div className={`${stepClass} ${animStep === 1 ? currentClass : ''}`}>
+                                    <span className="text-gray-400 block text-xs mb-1">1. 寫下公式</span>
+                                    n₁ sin θ₁ = n₂ sin θ₂
+                                </div>
+                            )}
+
+                            {/* Step 2: Substitution */}
+                            {animStep >= 2 && (
+                                <div className={`${stepClass} ${animStep === 2 ? currentClass : ''}`}>
+                                    <span className="text-gray-400 block text-xs mb-1">2. 代入數值</span>
+                                    {isFindN1 ? 'n₁' : n1} × sin({isFindTheta1 ? 'θ₁' : theta1}) = {isFindN2 ? 'n₂' : n2} × sin({isFindTheta2 ? 'θ₂' : theta2})
+                                </div>
+                            )}
+
+                            {/* Step 3: Calculation */}
+                            {animStep >= 3 && (
+                                <div className={`${stepClass} ${animStep === 3 ? currentClass : ''}`}>
+                                    <span className="text-gray-400 block text-xs mb-1">3. 計算已知數值</span>
+                                    {(isFindN1 || isFindTheta1) ? 
+                                        <>{isFindN1 ? 'n₁' : n1} × {isFindTheta1 ? `sin θ₁` : sin1Val} = {term2Val}</> :
+                                        <>{term1Val} = {isFindN2 ? 'n₂' : n2} × {isFindTheta2 ? `sin θ₂` : sin2Val}</>
+                                    }
+                                </div>
+                            )}
+
+                            {/* Step 4: Transposition (Fraction) */}
+                            {animStep >= 4 && (
+                                <div className={`${stepClass} ${animStep === 4 ? currentClass : ''}`}>
+                                    <span className="text-gray-400 block text-xs mb-1">4. 移項 (將未知數留在左邊)</span>
+                                    {isFindTheta1 && <>sin θ₁ = <Fraction top={term2Val} bottom={n1} /></>}
+                                    {isFindTheta2 && <>sin θ₂ = <Fraction top={term1Val} bottom={n2} /></>}
+                                    {isFindN1 && <>n₁ = <Fraction top={term2Val} bottom={sin1Val} /></>}
+                                    {isFindN2 && <>n₂ = <Fraction top={term1Val} bottom={sin2Val} /></>}
+                                </div>
+                            )}
+
+                            {/* Step 5: Division Result */}
+                            {animStep >= 5 && (
+                                <div className={`${stepClass} ${animStep === 5 ? currentClass : ''}`}>
+                                    <span className="text-gray-400 block text-xs mb-1">5. 計算除法結果</span>
+                                    {isFindTheta1 && `sin θ₁ = ${(term2Val/n1).toFixed(4)}`}
+                                    {isFindTheta2 && `sin θ₂ = ${(term1Val/n2).toFixed(4)}`}
+                                    {isFindN1 && <span className="text-yellow-300 font-bold">n₁ = {(term2Val/sin1Val).toFixed(2)} (答案)</span>}
+                                    {isFindN2 && <span className="text-yellow-300 font-bold">n₂ = {(term1Val/sin2Val).toFixed(2)} (答案)</span>}
+                                </div>
+                            )}
+
+                            {/* Step 6: Final Answer (No sin^-1 line) */}
+                            {animStep >= 6 && (isFindTheta1 || isFindTheta2) && (
+                                <div className={`${stepClass} ${animStep === 6 ? currentClass : ''}`}>
+                                    <span className="text-gray-400 block text-xs mb-1">6. 使用逆正弦 (Shift sin)</span>
+                                    {isFindTheta1 && <span className="text-yellow-300 font-bold block">θ₁ = {theta1}° (答案)</span>}
+                                    {isFindTheta2 && <span className="text-yellow-300 font-bold block">θ₂ = {theta2}° (答案)</span>}
+                                </div>
+                            )}
+                        </div>
+                    );
+                };
+
+                const renderCalculator = () => {
+                    if (animStep < 7) return null;
+                    
+                    const isAngle = targetVar.includes('theta');
+                    const finalVal = targetVar === 'theta1' ? (term2Val/n1).toFixed(4) : 
+                                    targetVar === 'theta2' ? (term1Val/n2).toFixed(4) : 
+                                    targetVar === 'n1' ? (term2Val/sin1Val) : (term1Val/sin2Val);
+
+                    const keys = [];
+                    if (isAngle) {
+                        keys.push('SHIFT', 'sin', '(', ...finalVal.toString().split(''), ')', '=');
+                    } else {
+                        const top = targetVar === 'n1' ? term2Val : term1Val;
+                        const bot = targetVar === 'n1' ? sin1Val : sin2Val;
+                        keys.push(...top.toString().split(''), '÷', ...bot.toString().split(''), '=');
+                    }
+
+                    return (
+                        <div className="mt-4 p-4 bg-gray-900 rounded-lg border border-gray-600 animate-fade-in-up">
+                            <div className="text-xs text-gray-400 mb-2 flex items-center gap-2">
+                                <Calculator size={14}/> 計算機按法參考 (Casio):
+                            </div>
+                            <div className="flex flex-wrap gap-2 justify-center">
+                                {keys.map((k, i) => (
+                                    <span key={i} className={`px-2 py-1 rounded text-sm font-bold shadow-sm border-b-2 active:border-b-0 active:translate-y-[2px] transition-all
+                                        ${k === 'SHIFT' ? 'bg-yellow-600 border-yellow-800 text-white' : 
+                                        k === '=' ? 'bg-blue-600 border-blue-800 text-white' : 
+                                        k === 'sin' ? 'bg-gray-700 border-gray-900 text-white' :
+                                        'bg-gray-200 border-gray-400 text-gray-800'}`}>
+                                        {k}
+                                    </span>
+                                ))}
+                            </div>
+                            {isAngle && <div className="text-center text-xs text-yellow-500 mt-2">注意：確保計算機設定在 DEG (角度) 模式</div>}
+                        </div>
+                    );
+                };
+
+                const getArcPath = (startAngleRad, isTop) => {
+                    const r = 40;
+                    const startX_arc = CENTER_X;
+                    const startY_arc = isTop ? CENTER_Y - r : CENTER_Y + r; 
+                    const endX_arc = CENTER_X + r * Math.sin(startAngleRad) * (isTop ? -1 : 1);
+                    const endY_arc = CENTER_Y + r * Math.cos(startAngleRad) * (isTop ? -1 : 1);
+                    return `M ${startX_arc} ${startY_arc} A ${r} ${r} 0 0 ${isTop ? 0 : 1} ${endX_arc} ${endY_arc}`;
+                };
+
+                // Dynamic Label Positioning based on question type and angle
+                const theta1X = theta1 > 35 ? CENTER_X - 25 : CENTER_X - 70;
+                const theta2X = CENTER_X + Math.max(50, 70 * Math.tan(rad2) + 15);
+
+                return (
+                <div className="flex flex-col h-full items-center">
+                    <div className="w-full max-w-4xl flex flex-col md:flex-row md:items-center gap-4 mb-4">
+                        <div>
+                            <span className="bg-teal-600 text-white px-3 py-1 rounded text-sm font-bold inline-block mb-1">練習題</span>
+                            <h2 className="text-xl font-bold text-teal-800">{title}</h2>
+                        </div>
+                        <div className="flex-1 bg-teal-50 border-l-4 border-teal-500 p-3 text-sm text-teal-900 rounded-r">
+                            <span className="font-bold">情境：</span>{scenario}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col lg:flex-row gap-6 w-full max-w-6xl justify-center items-start">
+                        
+                        <div className="relative bg-white rounded-xl shadow-lg border border-slate-200 p-2 shrink-0 self-center lg:self-start">
+                            <svg width={SVG_SIZE} height={SVG_SIZE} className="overflow-visible">
+                            <rect x="0" y="0" width={SVG_SIZE} height={CENTER_Y} fill={`rgba(37, 99, 235, 0.1)`} />
+                            <rect x="0" y={CENTER_Y} width={SVG_SIZE} height={CENTER_Y} fill={`rgba(22, 163, 74, 0.1)`} />
+                            <line x1="0" y1={CENTER_Y} x2={SVG_SIZE} y2={CENTER_Y} stroke="#334155" strokeWidth="2" />
+                            <line x1={CENTER_X} y1="0" x2={CENTER_X} y2={SVG_SIZE} stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" />
+                            <text x="10" y="30" className={`text-lg font-bold ${targetVar === 'n1' ? 'fill-red-600' : 'fill-blue-800'}`}>
+                                n₁ = {targetVar === 'n1' ? '?' : n1}
+                            </text>
+                            <text x="10" y={SVG_SIZE - 20} className={`text-lg font-bold ${targetVar === 'n2' ? 'fill-red-600' : 'fill-green-800'}`}>
+                                n₂ = {targetVar === 'n2' ? '?' : n2}
+                            </text>
+                            <line x1={startX} y1={startY} x2={CENTER_X} y2={CENTER_Y} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow-prob)" />
+                            <line x1={CENTER_X} y1={CENTER_Y} x2={endX} y2={endY} stroke="#ef4444" strokeWidth="3" markerEnd="url(#arrow-prob)" />
+                            <path d={getArcPath(rad1, true)} fill="none" stroke="#2563eb" strokeWidth="2" />
+                            {/* Dynamic Position for Theta1 */}
+                            <text x={theta1X} y={CENTER_Y - 50} className={`text-lg font-bold ${targetVar === 'theta1' ? 'fill-red-600' : 'fill-blue-700'}`}>
+                                θ₁={targetVar === 'theta1' ? '?' : theta1 + '°'}
+                            </text>
+                            <path d={getArcPath(rad2, false)} fill="none" stroke="#16a34a" strokeWidth="2" />
+                            {/* Dynamic Position for Theta2 */}
+                            <text x={theta2X} y={CENTER_Y + 70} className={`text-lg font-bold ${targetVar === 'theta2' ? 'fill-red-600' : 'fill-green-700'}`}>
+                                θ₂={targetVar === 'theta2' ? '?' : theta2 + '°'}
+                            </text>
+                            <defs>
+                                <marker id="arrow-prob" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                <path d="M0,0 L0,6 L9,3 z" fill="#ef4444" />
+                                </marker>
+                            </defs>
+                            </svg>
+                        </div>
+
+                        <div className="flex-1 w-full">
+                            <div className="bg-slate-800 text-white p-4 rounded-xl shadow-xl min-h-[400px] flex flex-col">
+                                <div className="text-center text-gray-400 text-sm mb-2 border-b border-gray-600 pb-2">
+                                    {animStep === 0 ? "點擊下方按鈕開始解題" : `解題步驟 (${animStep}/7)`}
+                                </div>
+                                
+                                <div className="flex-grow flex flex-col justify-center">
+                                    {animStep === 0 && (
+                                        <div className="text-center text-gray-500 py-10">
+                                            <Play size={48} className="mx-auto mb-4 opacity-50"/>
+                                            準備好後，點擊按鈕開始
+                                        </div>
+                                    )}
+                                    {renderMathStep()}
+                                    {renderCalculator()}
+                                </div>
+                            </div>
+
+                            <div className="mt-4 flex gap-3">
+                                <button 
+                                    onClick={startProblemAnimation}
+                                    className={`flex-1 py-3 rounded-lg font-bold shadow-md flex items-center justify-center gap-2 transition-colors
+                                        ${animStep > 0 ? 'bg-gray-200 text-gray-600 hover:bg-gray-300' : 'bg-teal-600 text-white hover:bg-teal-700'}`}
+                                >
+                                    <RotateCcw size={18}/> 重新開始
+                                </button>
+                                <button 
+                                    onClick={nextAnimStep}
+                                    disabled={animStep >= 7 || animStep === 0}
+                                    className={`flex-[2] py-3 rounded-lg font-bold shadow-md flex items-center justify-center gap-2 transition-colors
+                                        ${animStep === 0 || animStep >= 7 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700 animate-pulse'}`}
+                                >
+                                    下一步 <ChevronRight size={18}/>
+                                </button>
+                            </div>
+                            <p className="text-center text-xs text-gray-400 mt-2">提示：請跟隨步驟嘗試在紙上計算</p>
+                        </div>
+                    </div>
+                </div>
+                );
+            };
+
+            // --- NEW: GRAPH SLIDE COMPONENT ---
+            const GraphSlide = () => {
+                const [step, setStep] = useState(0);
+
+                const nextStep = () => setStep(s => Math.min(s + 1, 8));
+                const resetStep = () => setStep(0);
+
+                // Graph Coordinates with Grid
+                const G_ORIGIN_X = 40;
+                const G_ORIGIN_Y = 260; // Slightly higher origin for labels
+                const SCALE = 200; // 200px = 1.0 unit
+                const GRID_STEP = 0.1;
+                
+                const MAX_X_VAL = 0.8; // sin r max around 0.8
+                const MAX_Y_VAL = 1.0; // sin i max 1.0
+
+                const MAX_X_PX = MAX_X_VAL * SCALE;
+                const MAX_Y_PX = MAX_Y_VAL * SCALE;
+
+                // Experimental Data Table
+                const experimentData = [
+                    { i: 13, r: 9, sinI: 0.23, sinR: 0.15 },
+                    { i: 29, r: 19, sinI: 0.49, sinR: 0.32 },
+                    { i: 42, r: 27, sinI: 0.67, sinR: 0.45 },
+                    { i: 59, r: 35, sinI: 0.86, sinR: 0.58 },
+                ];
+
+                const dataPoints = experimentData.map(d => ({ x: d.sinR, y: d.sinI }));
+                const p1 = { x: 0.1, y: 0.15 }; 
+                const p2 = { x: 0.6, y: 0.90 }; 
+
+                const toScreen = (val, isY) => isY ? G_ORIGIN_Y - val * SCALE : G_ORIGIN_X + val * SCALE;
+
+                // Grid Generation
+                const renderGrid = () => {
+                    const lines = [];
+                    const labels = [];
+                    
+                    // Vertical Lines (X-axis steps)
+                    for (let v = 0; v <= MAX_X_VAL + 0.05; v += GRID_STEP) {
+                        const x = toScreen(v, false);
+                        if (Math.abs(v) < 0.01) continue; // Skip 0 line (drawn by axis)
+                        lines.push(
+                            <line key={`v${v}`} x1={x} y1={G_ORIGIN_Y} x2={x} y2={G_ORIGIN_Y - MAX_Y_PX} stroke="#e5e7eb" strokeWidth="1" />
+                        );
+                        labels.push(
+                            <text key={`vl${v}`} x={x} y={G_ORIGIN_Y + 15} textAnchor="middle" className="text-[10px] fill-gray-500">{v.toFixed(1)}</text>
+                        );
+                    }
+
+                    // Horizontal Lines (Y-axis steps)
+                    for (let v = 0; v <= MAX_Y_VAL; v += GRID_STEP) {
+                        const y = toScreen(v, true);
+                        if (Math.abs(v) < 0.01) continue;
+                        lines.push(
+                            <line key={`h${v}`} x1={G_ORIGIN_X} y1={y} x2={G_ORIGIN_X + MAX_X_PX} y2={y} stroke="#e5e7eb" strokeWidth="1" />
+                        );
+                        labels.push(
+                            <text key={`hl${v}`} x={G_ORIGIN_X - 10} y={y + 3} textAnchor="end" className="text-[10px] fill-gray-500">{v.toFixed(1)}</text>
+                        );
+                    }
+                    return { lines, labels };
+                };
+
+                const { lines: gridLines, labels: gridLabels } = renderGrid();
+
+                return (
+                    <div className="flex flex-col h-full items-center">
+                        <div className="w-full max-w-4xl flex items-center gap-2 mb-4">
+                            <span className="bg-purple-600 text-white px-3 py-1 rounded text-sm font-bold">實驗分析</span>
+                            <h2 className="text-2xl font-bold text-purple-800">繪畫圖像：sin i 對 sin r</h2>
+                        </div>
+
+                        <div className="flex flex-col lg:flex-row gap-8 w-full max-w-5xl justify-center items-start">
+                            
+                            {/* Graph Visual */}
+                            <div className="bg-white p-4 rounded-xl shadow-lg border border-purple-200 relative min-w-[300px] flex justify-center">
+                                <svg width={SVG_SIZE} height={SVG_SIZE} className="overflow-visible">
+                                    
+                                    {/* Grid Lines */}
+                                    {step >= 2 && gridLines}
+
+                                    {/* Axes */}
+                                    <line x1={G_ORIGIN_X} y1={G_ORIGIN_Y} x2={G_ORIGIN_X + MAX_X_PX + 20} y2={G_ORIGIN_Y} stroke="black" strokeWidth="2" markerEnd="url(#arrow-graph)" />
+                                    <line x1={G_ORIGIN_X} y1={G_ORIGIN_Y} x2={G_ORIGIN_X} y2={G_ORIGIN_Y - MAX_Y_PX - 20} stroke="black" strokeWidth="2" markerEnd="url(#arrow-graph)" />
+                                    
+                                    {/* Labels (Step 2+) */}
+                                    {step >= 2 && (
+                                        <>
+                                            {gridLabels}
+                                            <text x={G_ORIGIN_X + MAX_X_PX + 15} y={G_ORIGIN_Y + 15} className="font-bold text-xs fill-green-700">sin r (x)</text>
+                                            <text x={G_ORIGIN_X - 10} y={G_ORIGIN_Y - MAX_Y_PX - 15} className="font-bold text-xs fill-blue-700">sin i (y)</text>
+                                            <text x={G_ORIGIN_X - 10} y={G_ORIGIN_Y + 15} className="text-xs text-gray-500">0</text>
+                                        </>
+                                    )}
+
+                                    {/* Data Points (Step 3+) */}
+                                    {step >= 3 && dataPoints.map((pt, i) => (
+                                        <text key={i} x={toScreen(pt.x, false)} y={toScreen(pt.y, true)} textAnchor="middle" dominantBaseline="middle" className="text-xs fill-red-500 font-sans font-bold" fontSize="10">x</text>
+                                    ))}
+
+                                    {/* Line of Best Fit (Step 4+) */}
+                                    {step >= 4 && (
+                                        <line 
+                                            x1={G_ORIGIN_X} y1={G_ORIGIN_Y} 
+                                            x2={toScreen(0.65, false)} y2={toScreen(0.975, true)} 
+                                            stroke="#9333ea" strokeWidth="2" 
+                                            className="animate-draw"
+                                        />
+                                    )}
+
+                                    {/* Selected Points (Step 5+) */}
+                                    {step >= 5 && (
+                                        <>
+                                            <circle cx={toScreen(p1.x, false)} cy={toScreen(p1.y, true)} r="4" fill="blue" stroke="white" strokeWidth="1"/>
+                                            <circle cx={toScreen(p2.x, false)} cy={toScreen(p2.y, true)} r="4" fill="blue" stroke="white" strokeWidth="1"/>
+                                            
+                                            {/* Dashed Lines */}
+                                            <line x1={toScreen(p1.x, false)} y1={toScreen(p1.y, true)} x2={toScreen(p2.x, false)} y2={toScreen(p1.y, true)} stroke="blue" strokeDasharray="3,3" />
+                                            <line x1={toScreen(p2.x, false)} y1={toScreen(p1.y, true)} x2={toScreen(p2.x, false)} y2={toScreen(p2.y, true)} stroke="blue" strokeDasharray="3,3" />
+                                        </>
+                                    )}
+
+                                    {/* Coordinates (Step 6+) */}
+                                    {step >= 6 && (
+                                        <>
+                                            <text x={toScreen(p1.x, false) + 8} y={toScreen(p1.y, true) + 15} className="text-xs font-bold fill-blue-700 bg-white">({p1.x.toFixed(2)}, {p1.y.toFixed(2)})</text>
+                                            <text x={toScreen(p2.x, false) - 60} y={toScreen(p2.y, true) - 10} className="text-xs font-bold fill-blue-700 bg-white">({p2.x.toFixed(2)}, {p2.y.toFixed(2)})</text>
+                                        </>
+                                    )}
+
+                                    <defs>
+                                        <marker id="arrow-graph" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+                                            <path d="M0,0 L0,6 L9,3 z" fill="black" />
+                                        </marker>
+                                    </defs>
+                                </svg>
+                            </div>
+
+                            {/* Instruction Panel */}
+                            <div className="flex-1 space-y-4">
+                                
+                                <div className="bg-slate-800 text-white p-4 rounded-lg min-h-[220px] flex flex-col justify-center shadow-xl">
+                                    {step === 0 && (
+                                        <div className="text-center">
+                                            <h3 className="text-xl font-bold text-yellow-400 mb-2">如何計算折射率？</h3>
+                                            <p className="text-gray-300">透過繪畫圖像，我們可以更準確地找出折射率。<br/>請跟隨步驟一起完成圖表。</p>
+                                        </div>
+                                    )}
+
+                                    {step === 1 && (
+                                        <div className="w-full">
+                                            <p className="font-bold text-yellow-400 text-lg mb-2">Step 1: 數據記錄與處理</p>
+                                            <p className="text-sm text-gray-200 mb-2">記錄實驗角度，並計算正弦值 (sin)：</p>
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm text-center border-collapse">
+                                                    <thead>
+                                                        <tr className="bg-gray-700 text-gray-200">
+                                                            <th className="p-1 border border-gray-600">入射角 i (°)</th>
+                                                            <th className="p-1 border border-gray-600">折射角 r (°)</th>
+                                                            <th className="p-1 border border-gray-600 bg-blue-900/50">sin i (y軸座標)</th>
+                                                            <th className="p-1 border border-gray-600 bg-green-900/50">sin r (x軸座標)</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {experimentData.map((row, idx) => (
+                                                            <tr key={idx} className="border border-gray-600">
+                                                                <td className="p-1">{row.i}</td>
+                                                                <td className="p-1">{row.r}</td>
+                                                                <td className="p-1 font-mono text-blue-300">{row.sinI.toFixed(2)}</td>
+                                                                <td className="p-1 font-mono text-green-300">{row.sinR.toFixed(2)}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+                                    
+                                    {step === 2 && (
+                                        <div>
+                                            <p className="font-bold text-yellow-400 text-lg mb-2">Step 2: 建立坐標軸</p>
+                                            <p className="text-sm text-gray-200 mb-2">根據表格數據範圍，設定合適的刻度：</p>
+                                            <ul className="list-disc pl-5 space-y-2 text-sm text-gray-200">
+                                                <li>縱軸 (y): <span className="font-bold text-blue-400">sin i</span> (每格 0.1，最大 1.0)</li>
+                                                <li>橫軸 (x): <span className="font-bold text-green-400">sin r</span> (每格 0.1，最大 0.8)</li>
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {step === 3 && (
+                                        <div>
+                                            <p className="font-bold text-yellow-400 text-lg mb-2">Step 3: 標記數據點</p>
+                                            <p className="text-sm text-gray-200">根據表格數據，用 'x' 號在方格紙上標出各點位置。</p>
+                                        </div>
+                                    )}
+
+                                    {step === 4 && (
+                                        <div>
+                                            <p className="font-bold text-yellow-400 text-lg mb-2">Step 4: 繪畫最佳擬合直線</p>
+                                            <ul className="list-disc pl-5 space-y-2 text-sm text-gray-200">
+                                                <li>畫一條直線，盡量穿過最多的點。</li>
+                                                <li>確保直線兩側的點分佈平均。</li>
+                                                <li><span className="font-bold text-red-400">重要：</span>根據斯涅耳定律，直線必須穿過原點 (0,0)。</li>
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {step === 5 && (
+                                        <div>
+                                            <p className="font-bold text-yellow-400 text-lg mb-2">Step 5: 選取兩點計算</p>
+                                            <p className="text-sm text-gray-200">在<span className="font-bold text-purple-400">直線上</span>選取兩點 (藍點) 來計算斜率。</p>
+                                            <div className="bg-slate-900 p-2 mt-2 rounded border-l-4 border-red-500 text-xs text-gray-300">
+                                                注意：不要直接選取原本的數據點(x)，要選直線上的點！兩點距離越遠，誤差越小。
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {step === 6 && (
+                                        <div>
+                                            <p className="font-bold text-yellow-400 text-lg mb-2">Step 6: 讀取坐標</p>
+                                            <p className="text-sm text-gray-200 mb-2">讀出兩點的坐標 $(x, y)$：</p>
+                                            <ul className="font-mono text-sm space-y-1 ml-4">
+                                                <li>點 1: ({p1.x.toFixed(2)}, {p1.y.toFixed(2)})</li>
+                                                <li>點 2: ({p2.x.toFixed(2)}, {p2.y.toFixed(2)})</li>
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {step === 7 && (
+                                        <div>
+                                            <p className="font-bold text-yellow-400 text-lg mb-2">Step 7: 計算斜率 (Slope)</p>
+                                            <div className="font-mono text-sm bg-slate-900 p-2 rounded text-center">
+                                                <p className="mb-2">公式： m = <Fraction top="y₂ - y₁" bottom="x₂ - x₁" /></p>
+                                                <p>m = <Fraction top={`${p2.y.toFixed(2)} - ${p1.y.toFixed(2)}`} bottom={`${p2.x.toFixed(2)} - ${p1.x.toFixed(2)}`} /> = <Fraction top="0.75" bottom="0.50" /> = <span className="text-xl font-bold text-yellow-300">1.5</span></p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {step === 8 && (
+                                        <div className="text-center">
+                                            <CheckCircle className="mx-auto text-green-500 mb-2" size={32}/>
+                                            <p className="font-bold text-yellow-400 text-lg">Step 8: 得出結論</p>
+                                            <p className="text-white mt-2">直線的斜率 = 折射率 (n)</p>
+                                            <div className="mt-3 p-2 bg-green-900/50 rounded border border-green-500/50 font-bold">
+                                                n = 1.5
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-2 mt-4">
+                                    <button onClick={resetStep} className="p-3 bg-gray-200 rounded-lg hover:bg-gray-300 text-gray-700 transition-colors shadow-sm" title="重新開始">
+                                        <RotateCcw size={20}/>
+                                    </button>
+                                    <button 
+                                        onClick={nextStep} 
+                                        className={`flex-1 py-3 rounded-lg font-bold shadow-md flex justify-center items-center gap-2 transition-all
+                                            ${step >= 8 ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-purple-600 text-white hover:bg-purple-700'}`}
+                                    >
+                                        {step >= 8 ? '完成教學' : '下一步'} <ChevronRight size={20}/>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
+            const slides = [
+                { component: <BasicConceptSlide />, title: "基礎概念" },
+                { component: <MechanismSlide />, title: "偏折原理" },
+                { 
+                    component: <ProblemSlide 
+                        title="題目一：求介質折射率 n₁" 
+                        scenario="光線由某未知介質射入空氣 (n=1.0)。已知入射角為 30°，折射角為 45°。求該未知介質的折射率。"
+                        targetVar="n1" 
+                        values={{ n1: 1.41, theta1: 30, n2: 1.0, theta2: 45 }} 
+                    />, 
+                    title: "練習題 1" 
+                },
+                { 
+                    component: <ProblemSlide 
+                        title="題目二：求入射角 θ₁" 
+                        scenario="光線由空氣 (n=1.0) 射入水中 (n=1.33)。若折射角為 30°，求入射角是多少？"
+                        targetVar="theta1" 
+                        values={{ n1: 1.0, theta1: 41.7, n2: 1.33, theta2: 30 }} 
+                    />, 
+                    title: "練習題 2" 
+                },
+                { 
+                    component: <ProblemSlide 
+                        title="題目三：求塑膠折射率 n₂" 
+                        scenario="光線由空氣 (n=1.0) 射入某種透明塑膠。入射角為 50°，折射角為 30°。求該塑膠的折射率。"
+                        targetVar="n2" 
+                        values={{ n1: 1.0, theta1: 50, n2: 1.53, theta2: 30 }} 
+                    />, 
+                    title: "練習題 3" 
+                },
+                { 
+                    component: <ProblemSlide 
+                        title="題目四：求水中折射角 θ₂" 
+                        scenario="光線由水 (n=1.33) 射入玻璃 (n=1.5)。入射角為 50°，求玻璃中的折射角。"
+                        targetVar="theta2" 
+                        values={{ n1: 1.33, theta1: 50, n2: 1.5, theta2: 42.8 }} 
+                    />, 
+                    title: "練習題 4" 
+                },
+                {
+                    component: <GraphSlide />, title: "數據分析"
+                }
+            ];
+
+            const totalSlides = slides.length;
+
+            const nextSlide = () => setCurrentSlide(prev => Math.min(prev + 1, totalSlides - 1));
+            const prevSlide = () => setCurrentSlide(prev => Math.max(prev - 1, 0));
+
+            return (
+                <div className="min-h-screen flex flex-col items-center">
+                    {/* Header */}
+                    <header className="w-full max-w-5xl bg-white shadow-sm rounded-xl p-4 mb-6 mt-6 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                        <div className="bg-blue-600 text-white p-2 rounded-lg">
+                            <BookOpen size={24} />
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-bold text-slate-800">物理自學單元：光的折射</h1>
+                            <p className="text-xs text-slate-500">香港中三物理課程適用</p>
+                        </div>
+                        </div>
+                        <div className="text-sm font-medium text-slate-400">
+                        頁數 {currentSlide + 1} / {totalSlides}
+                        </div>
+                    </header>
+
+                    {/* Main Content Area (Slide) */}
+                    <main className="w-full max-w-5xl bg-white shadow-xl rounded-2xl overflow-hidden flex-grow min-h-[600px] flex flex-col relative border border-slate-200 mb-6">
+                        
+                        {/* Slide Content */}
+                        <div className="flex-grow p-6 md:p-10 overflow-y-auto">
+                        {slides[currentSlide].component}
+                        </div>
+
+                        {/* Navigation Bar */}
+                        <div className="bg-slate-100 p-4 flex justify-between items-center border-t border-slate-200">
+                        <button 
+                            onClick={prevSlide} 
+                            disabled={currentSlide === 0}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-colors ${
+                            currentSlide === 0 
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                : 'bg-white text-blue-600 hover:bg-blue-50 border border-blue-200 shadow-sm'
+                            }`}
+                        >
+                            <ChevronLeft size={20} /> 上一頁
+                        </button>
+
+                        {/* Progress Dots */}
+                        <div className="flex gap-2">
+                            {slides.map((_, index) => (
+                            <div 
+                                key={index}
+                                className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                                index === currentSlide ? 'bg-blue-600 w-6' : 'bg-gray-300'
+                                }`}
+                            />
+                            ))}
+                        </div>
+
+                        <button 
+                            onClick={nextSlide} 
+                            disabled={currentSlide === totalSlides - 1}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-colors ${
+                            currentSlide === totalSlides - 1 
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                                : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md'
+                            }`}
+                        >
+                            下一頁 <ChevronRight size={20} />
+                        </button>
+                        </div>
+                    </main>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<SnellsLawLearning />);
+    </script>
+</body>
+</html>
